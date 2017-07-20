@@ -1,0 +1,1 @@
+"{\n  \"access_token\": \"sk_test_gUmC807pjWfgFyEfq6bL90HK\",\n  \"livemode\": false,\n  \"refresh_token\": \"rt_B3ibeN21BkrHdzCE1ilGcI325pugbzKippDgTEi1Z8owZ7sQ\",\n  \"token_type\": \"bearer\",\n  \"stripe_publishable_key\": \"pk_test_xvxrNZGZf91C8wUG8Qcie838\",\n  \"stripe_user_id\": \"acct_19k72ACYIPz8vRWH\",\n  \"scope\": \"read_write\"\n}"
