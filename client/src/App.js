@@ -8,6 +8,8 @@ import RaisedButton from 'material-ui/RaisedButton';
 import TextField from 'material-ui/TextField';
 import getQueryParam from './getQueryParam';
 import {Card, CardHeader} from 'material-ui/Card';
+import Divider from 'material-ui/Divider';
+import jsonData from './data.json';
 
 injectTapEventPlugin();
 
@@ -47,11 +49,17 @@ class App extends Component {
       amount: null,
       charge: null,
       transfer: null,
-      formError: false
+      formError: false,
+      connected: false,
+      error : null,
     };
   }
 
   componentDidMount() {
+    const connectData = JSON.parse(jsonData);
+    if(connectData && connectData.stripe_user_id){
+      this.setState({connected: true});
+    }
     // Add an instance of the card Element into the `card-element` <div>
     card.mount('#card-element');
 
@@ -84,12 +92,31 @@ class App extends Component {
               this.setState({amount: chargeAmount, charge: data.data});
               localStorage.setItem('amount', chargeAmount);
               localStorage.setItem('chargeId', data.data.id);
+            } else {
+              this.setState({error: data.data});
             }
           });
         }).catch((err) => {
           console.log(err);
         });
       }
+    });
+  }
+
+  submitStripeCharge = () => {
+    const chargeAmount = this.chargeStripeInput.input.value;
+    fetch(`http://localhost:3001/api/stripe/stripeCharge?amount=${chargeAmount}`, {accept: 'application/json', mode: 'cors'}).then((response) => {
+      response.json().then(data => {
+        if (data.success) {
+          this.setState({amount: chargeAmount, charge: data.data});
+          localStorage.setItem('amount', chargeAmount);
+          localStorage.setItem('chargeId', data.data.id);
+        } else {
+          this.setState({error: data.data});
+        }
+      });
+    }).catch((err) => {
+      console.log(err);
     });
   }
 
@@ -102,6 +129,8 @@ class App extends Component {
             this.setState({transfer: data.data});
             localStorage.setItem('amount', null);
             localStorage.setItem('chargeId', null);
+          } else {
+            this.setState({error: data.data});
           }
       });
     }).catch((err) => {
@@ -111,6 +140,7 @@ class App extends Component {
 
   render() {
     const connect = getQueryParam('connect');
+    const localStorageAmount = localStorage.getItem('amount') !== 'null';
     return (
       <MuiThemeProvider>
         <div className="App">
@@ -120,12 +150,13 @@ class App extends Component {
           </div>
           <p className="App-intro" />
           <div>
-            {localStorage.getItem('amount') && connect &&
+            {localStorageAmount && connect &&
               <RaisedButton
                 label="Receive Winnings"
                 onClick={this.submitTransfer}
               />
             }
+            {!localStorageAmount && connect && <div><p>No amount charged to receive winnings.</p><RaisedButton label="Back" href='http://localhost:3000' /></div>}
             <br /><br />
             {this.state.transfer &&
               <Card style={{width: 500, margin: 'auto'}}>
@@ -150,26 +181,39 @@ class App extends Component {
               <br />
               <div id="card-errors" role="alert"></div></div>
               <br />
-              <TextField type="number" defaultValue='10' floatingLabelText="Enter $ into pot" ref={(input) => { this.chargeInput = input; }} />
+              <TextField type="number" defaultValue='10' floatingLabelText="Enter $ from card" ref={(input) => { this.chargeInput = input; }} />
               <br/>
               <RaisedButton label='Pay' disabled={this.state.formError} onClick={this.submitCharge} />
             </form>
             <br/><br/>
-            {this.state.charge &&
-              <div>
-              <Card style={{width: 1000, margin: 'auto'}}>
-                <CardHeader
-                  className="card-title"
-                  title={JSON.stringify(this.state.charge, null, 10)}
-                />
-              </Card>
-              <br /><br />
-              {this.state.amount &&
+            <Divider />
+            <br/><br/>
+            <br />
+            <TextField type="number" defaultValue='' floatingLabelText="Enter $ from stripe" ref={(input) => { this.chargeStripeInput = input; }} />
+            <br/>
+            <RaisedButton label='Pay' disabled={!this.state.connected} onClick={this.submitStripeCharge} />
+            <br/><br/>
+              {this.state.connected && this.state.charge &&
                 <RaisedButton
-                  label="Connect with Stripe"
-                  href='https://connect.stripe.com/oauth/authorize?response_type=code&client_id=ca_B2cTTSqNUDbklnO8F49Tll68CUDllize&scope=read_write'
+                  label="Proceed to Winnings Page"
+                  href='http://localhost:3000?connect=true'
                 />
               }
+            <br/><br/>
+              <RaisedButton
+                label="Connect with Stripe"
+                href='https://connect.stripe.com/oauth/authorize?response_type=code&client_id=ca_B2cTTSqNUDbklnO8F49Tll68CUDllize&scope=read_write'
+              />
+            <br /><br />
+            {(this.state.charge || this.state.error) &&
+              <div>
+                <Card style={{width: 1000, margin: 'auto'}}>
+                  <CardHeader
+                    className="card-title"
+                    title={JSON.stringify(this.state.charge || this.state.error, null, 10)}
+                  />
+                </Card>
+                <br /><br />
               </div>
             }
           </div>}

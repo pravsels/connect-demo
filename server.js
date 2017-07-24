@@ -39,7 +39,7 @@ app.get("/api/connect/oauth/callback", (req, res) => {
     }
   }, (err, r, body) => {
     res.setHeader('Content-Type', 'application/json');
-    fs.writeFile('data.json', JSON.stringify(body || {}), 'utf-8', () => {
+    fs.writeFile('./client/src/data.json', JSON.stringify(body || {}), 'utf-8', () => {
       res.redirect('http://localhost:3000?connect=true');
     });
   });
@@ -59,8 +59,26 @@ app.get('/api/stripe/charge', (req, res) => {
   });
 });
 
+app.get('/api/stripe/stripeCharge', (req, res) => {
+  fs.readFile('./client/src/data.json', 'utf-8', (err, data) => {
+    if (err) { res.send({success: false, data: err}) };
+    const jsonData = JSON.parse(JSON.parse(data));
+    stripe.charges.create({
+      amount: req.query.amount * 100,
+      currency: "usd",
+      source: "tok_visa",
+      on_behalf_of: jsonData.stripe_user_id,
+    }).then((charge) => {
+      res.send({ success: true, data: charge });
+    }).catch((err) => {
+      console.log(err);
+      res.send({ success: false, data: err });
+    });
+  });
+});
+
 app.get('/api/stripe/transfer', (req, res) => {
-  fs.readFile('./data.json', 'utf-8', (err, data) => {
+  fs.readFile('./client/src/data.json', 'utf-8', (err, data) => {
     if (err) { res.send({success: false, data: err}) };
     const jsonData = JSON.parse(JSON.parse(data));
     stripe.transfers.create({
